@@ -1,0 +1,5 @@
+{
+  "name": "Sistema de Gestão Escolar CEBE",
+  "description": "Uma aplicação web completa para gerenciar alunos, cursos e mensalidades de uma instituição de ensino. Permite cadastrar, visualizar, editar e remover registros, além de oferecer um painel com estatísticas gerais.",
+  "requestFramePermissions": []
+}

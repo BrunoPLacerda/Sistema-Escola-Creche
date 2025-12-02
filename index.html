@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-g" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Gestão Escolar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-primary': '#5DA463', // Green based on the flyer background
+              'brand-secondary': '#E58E73', // Orange/Terracotta based on the flyer accents
+              'brand-light': '#EBF5EC', // Light green for backgrounds
+              'brand-dark': '#2C5F34', // Dark green for text/contrast
+              'status-paid': '#22c55e',
+              'status-pending': '#f97316',
+              'status-overdue': '#ef4444',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "vite": "https://aistudiocdn.com/vite@^7.2.6"
+  }
+}
+</script>
+</head>
+  <body class="bg-gray-100">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
