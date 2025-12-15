@@ -1,5 +1,6 @@
 
 export type Page = 'dashboard' | 'students' | 'teachers' | 'courses' | 'financial' | 'communications' | 'reports' | 'calendar' | 'receipts';
+export type UserRole = 'admin' | 'guardian';
 
 export enum PaymentStatus {
   Paid = 'Pago',
@@ -11,6 +12,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
 }
 
 export interface Course {
@@ -22,6 +24,16 @@ export interface Course {
   whatsappGroupLink?: string;
 }
 
+export interface AcademicRecord {
+  subject: string;
+  grade1?: number; // Nota 1º Bimestre/Semestre
+  grade2?: number;
+  grade3?: number;
+  grade4?: number;
+  attendance: number; // Porcentagem de presença (0-100)
+  observations?: string;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -30,6 +42,11 @@ export interface Student {
   phone: string;
   enrolledCourseId: string;
   paymentStatus: PaymentStatus;
+  // Dados do Responsável Legal
+  guardianName: string;
+  guardianCpf: string; // Chave de acesso
+  // Dados Acadêmicos
+  academicRecords?: AcademicRecord[];
 }
 
 export interface Teacher {

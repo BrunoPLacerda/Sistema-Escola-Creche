@@ -17,7 +17,16 @@ const StudentForm: React.FC<{
   onCancel: () => void;
 }> = ({ student, courses, onSave, onCancel }) => {
   const [formData, setFormData] = useState<Partial<Student>>(
-    student || { name: '', dob: '', email: '', phone: '', enrolledCourseId: '', paymentStatus: PaymentStatus.Pending }
+    student || { 
+        name: '', 
+        dob: '', 
+        email: '', 
+        phone: '', 
+        enrolledCourseId: '', 
+        paymentStatus: PaymentStatus.Pending,
+        guardianName: '',
+        guardianCpf: ''
+    }
   );
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -32,8 +41,9 @@ const StudentForm: React.FC<{
 
   return (
      <form onSubmit={handleSubmit} className="space-y-4">
+        <h4 className="text-sm font-bold text-brand-primary uppercase border-b pb-1">Dados do Aluno</h4>
         <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome Completo</label>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nome Completo do Aluno</label>
             <input type="text" name="name" id="name" value={formData.name || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"/>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -42,14 +52,38 @@ const StudentForm: React.FC<{
                 <input type="date" name="dob" id="dob" value={formData.dob || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"/>
             </div>
             <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone</label>
-                <input type="tel" name="phone" id="phone" value={formData.phone || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"/>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone (Aluno)</label>
+                <input type="tel" name="phone" id="phone" value={formData.phone || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"/>
             </div>
         </div>
         <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" name="email" id="email" value={formData.email || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"/>
+            <input type="email" name="email" id="email" value={formData.email || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"/>
         </div>
+        
+        <h4 className="text-sm font-bold text-brand-primary uppercase border-b pb-1 mt-6">Dados do Responsável (Portal)</h4>
+        <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
+            <div className="mb-3">
+                <label htmlFor="guardianName" className="block text-sm font-medium text-gray-700">Nome do Responsável Legal</label>
+                <input type="text" name="guardianName" id="guardianName" value={formData.guardianName || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"/>
+            </div>
+            <div>
+                <label htmlFor="guardianCpf" className="block text-sm font-medium text-gray-700">CPF do Responsável (Login do Portal)</label>
+                <input 
+                    type="text" 
+                    name="guardianCpf" 
+                    id="guardianCpf" 
+                    value={formData.guardianCpf || ''} 
+                    onChange={handleChange} 
+                    required 
+                    placeholder="000.000.000-00"
+                    className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">Este CPF será usado para o responsável acessar o Portal do Aluno.</p>
+            </div>
+        </div>
+
+        <h4 className="text-sm font-bold text-brand-primary uppercase border-b pb-1 mt-6">Matrícula</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label htmlFor="enrolledCourseId" className="block text-sm font-medium text-gray-700">Curso Matriculado</label>
@@ -124,7 +158,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ students, 
   return (
     <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in">
         <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-semibold text-gray-700">Lista de Alunos</h3>
+            <h3 className="text-xl font-semibold text-gray-700">Lista de Alunos e Responsáveis</h3>
             <button onClick={handleAdd} className="flex items-center px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-secondary transition-transform transform hover:scale-105 shadow-md">
                 <AddIcon />
                 <span className="ml-2">Adicionar Aluno</span>
@@ -135,9 +169,10 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ students, 
             <table className="w-full text-sm text-left text-gray-500">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                     <tr>
-                        <th scope="col" className="px-6 py-3">Nome</th>
+                        <th scope="col" className="px-6 py-3">Aluno</th>
+                        <th scope="col" className="px-6 py-3">Responsável</th>
                         <th scope="col" className="px-6 py-3">Curso</th>
-                        <th scope="col" className="px-6 py-3">Status Pagamento</th>
+                        <th scope="col" className="px-6 py-3">Status</th>
                         <th scope="col" className="px-6 py-3 text-center">Ações</th>
                     </tr>
                 </thead>
@@ -146,7 +181,14 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ students, 
                         const course = courses.find(c => c.id === student.enrolledCourseId);
                         return (
                             <tr key={student.id} className="bg-white border-b hover:bg-gray-50">
-                                <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{student.name}</td>
+                                <td className="px-6 py-4">
+                                    <div className="font-medium text-gray-900">{student.name}</div>
+                                    <div className="text-xs text-gray-400">{student.email}</div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="text-gray-900">{student.guardianName}</div>
+                                    <div className="text-xs text-gray-400">CPF: {student.guardianCpf}</div>
+                                </td>
                                 <td className="px-6 py-4">{course?.name || 'N/A'}</td>
                                 <td className="px-6 py-4">
                                     <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(student.paymentStatus)}`}>
