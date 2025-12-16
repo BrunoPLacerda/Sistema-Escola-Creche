@@ -8,7 +8,7 @@ interface LoginProps {
   students: Student[];
 }
 
-type ViewState = 'login' | 'register' | 'forgot_password';
+type ViewState = 'login' | 'register' | 'forgot_password' | 'guardian_register';
 type LoginTab = 'guardian' | 'admin';
 
 export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
@@ -26,6 +26,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
+  // Guardian First Access State
+  const [gRegCpf, setGRegCpf] = useState('');
+  const [gRegEmail, setGRegEmail] = useState('');
+  const [gRegPassword, setGRegPassword] = useState('');
+  const [gRegConfirmPassword, setGRegConfirmPassword] = useState('');
+
   // Recovery State
   const [recoveryEmail, setRecoveryEmail] = useState('');
 
@@ -34,6 +40,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Helper: Remove non-digits for comparison
+  const cleanCpf = (value: string) => value.replace(/\D/g, '');
 
   // Mask Functions
   const formatCPF = (value: string) => {
@@ -71,7 +80,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
       // LÓGICA PARA ADMINISTRADOR
       if (activeTab === 'admin') {
           // 1. Verifica Admin (Hardcoded)
-          if (cpf === '123.456.789-00' && password === '123456') {
+          if (cleanCpf(cpf) === '12345678900' && password === '123456') {
             onLogin('admin');
             setIsLoading(false);
             return;
@@ -80,7 +89,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
           // 2. Verifica Admin (LocalStorage)
           const storedUsers = localStorage.getItem('cebe_users');
           const users = storedUsers ? JSON.parse(storedUsers) : [];
-          const foundAdmin = users.find((u: any) => u.cpf === cpf && u.password === password);
+          const foundAdmin = users.find((u: any) => cleanCpf(u.cpf) === cleanCpf(cpf) && u.password === password);
 
           if (foundAdmin) {
             onLogin('admin');
@@ -92,18 +101,43 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
       } 
       // LÓGICA PARA RESPONSÁVEL (PAIS)
       else {
-          const foundStudent = students.find(s => s.guardianCpf === cpf);
+          // 1. Verifica se existe cadastro de senha personalizado (LocalStorage)
+          const storedGuardians = localStorage.getItem('cebe_guardians');
+          const guardians = storedGuardians ? JSON.parse(storedGuardians) : [];
+          
+          // Busca usando cleanCpf para garantir compatibilidade
+          const registeredGuardian = guardians.find((g: any) => cleanCpf(g.cpf) === cleanCpf(cpf));
+          const foundStudent = students.find(s => cleanCpf(s.guardianCpf) === cleanCpf(cpf));
           
           if (foundStudent) {
-              // Simulação de validação de senha (aceita 123456 ou os 6 primeiros digitos do CPF)
-              const defaultPass = cpf.replace(/\D/g, '').substring(0, 6);
-              
-              if (password === '123456' || password === defaultPass) {
+              let isAuthenticated = false;
+
+              // Se o usuário já criou senha, usa a senha criada
+              if (registeredGuardian) {
+                  if (registeredGuardian.password === password) {
+                      isAuthenticated = true;
+                  } else {
+                      setError('Senha incorreta.');
+                      setIsLoading(false);
+                      return;
+                  }
+              } 
+              // Fallback para senha padrão (caso não tenha criado senha ainda)
+              else {
+                  const defaultPass = cleanCpf(cpf).substring(0, 6);
+                  if (password === '123456' || password === defaultPass) {
+                      isAuthenticated = true;
+                  } else {
+                     setError(`Senha incorreta. Se for seu primeiro acesso, clique em "Criar Senha".`);
+                     setIsLoading(false);
+                     return;
+                  }
+              }
+
+              if (isAuthenticated) {
                   onLogin('guardian', foundStudent.id);
                   setIsLoading(false);
                   return;
-              } else {
-                 setError(`Senha incorreta. Dica: Tente os 6 primeiros dígitos do CPF.`);
               }
           } else {
               setError('CPF do responsável não encontrado na base de alunos.');
@@ -115,6 +149,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
     }, 800);
   };
 
+  // Cadastro de Admin (Existente)
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -124,8 +159,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
       const storedUsers = localStorage.getItem('cebe_users');
       const users = storedUsers ? JSON.parse(storedUsers) : [];
 
-      if (users.find((u: any) => u.cpf === regCpf)) {
-          setError('Este CPF já possui cadastro.');
+      if (users.find((u: any) => cleanCpf(u.cpf) === cleanCpf(regCpf))) {
+          setError('Este CPF já possui cadastro administrativo.');
           setIsLoading(false);
           return;
       }
@@ -147,6 +182,60 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
       setRegName(''); setRegPhone(''); setRegCpf(''); setRegEmail(''); setRegPassword('');
       setCpf(regCpf);
       setView('login');
+    }, 1000);
+  };
+
+  // NOVO: Cadastro de Senha do Responsável (Primeiro Acesso)
+  const handleGuardianRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    if (gRegPassword !== gRegConfirmPassword) {
+        setError('As senhas não conferem.');
+        setIsLoading(false);
+        return;
+    }
+
+    setTimeout(() => {
+        // 1. Verifica se o CPF existe na base da escola (Passada via props) - COMPARAÇÃO ROBUSTA (Apenas Números)
+        const isRegisteredByAdmin = students.some(s => cleanCpf(s.guardianCpf) === cleanCpf(gRegCpf));
+
+        if (!isRegisteredByAdmin) {
+            setError('CPF não identificado. Por favor, procure a administração para verificação.');
+            setIsLoading(false);
+            return;
+        }
+
+        // 2. Verifica se já possui senha criada
+        const storedGuardians = localStorage.getItem('cebe_guardians');
+        const guardians = storedGuardians ? JSON.parse(storedGuardians) : [];
+        
+        const existingIndex = guardians.findIndex((g: any) => cleanCpf(g.cpf) === cleanCpf(gRegCpf));
+
+        const newGuardianCreds = {
+            cpf: gRegCpf,
+            email: gRegEmail,
+            password: gRegPassword
+        };
+
+        if (existingIndex >= 0) {
+            // Atualiza senha existente
+            guardians[existingIndex] = newGuardianCreds;
+        } else {
+            // Cria novo registro
+            guardians.push(newGuardianCreds);
+        }
+
+        localStorage.setItem('cebe_guardians', JSON.stringify(guardians));
+
+        setIsLoading(false);
+        setSuccessMsg('Senha criada com sucesso! Você já pode acessar o portal.');
+        
+        // Limpa campos e volta pro login
+        setGRegCpf(''); setGRegEmail(''); setGRegPassword(''); setGRegConfirmPassword('');
+        setCpf(gRegCpf); // Preenche o CPF no login automaticamente
+        setView('login');
     }, 1000);
   };
 
@@ -230,23 +319,31 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
           </div>
         )}
 
-        {/* VIEW REGISTER HEADER (OVERRIDE TABS) */}
+        {/* VIEW REGISTER HEADER (ADMIN) */}
         {view === 'register' && (
            <div className="bg-brand-primary p-4 text-white text-center">
               <h3 className="font-bold">Novo Cadastro Administrativo</h3>
            </div>
         )}
 
-        {/* VIEW RECOVERY HEADER (OVERRIDE TABS) */}
-        {view === 'forgot_password' && (
+        {/* VIEW GUARDIAN REGISTER HEADER */}
+        {view === 'guardian_register' && (
            <div className="bg-brand-secondary p-4 text-white text-center">
+              <h3 className="font-bold">Primeiro Acesso - Responsável</h3>
+              <p className="text-xs opacity-90">Crie sua senha para acessar o portal</p>
+           </div>
+        )}
+
+        {/* VIEW RECOVERY HEADER */}
+        {view === 'forgot_password' && (
+           <div className="bg-gray-700 p-4 text-white text-center">
               <h3 className="font-bold">Recuperar Acesso</h3>
            </div>
         )}
 
         <div className="p-8 pt-6">
             {successMsg && (
-                <div className="mb-4 bg-green-50 border-l-4 border-green-500 p-4 rounded-r">
+                <div className="mb-4 bg-green-50 border-l-4 border-green-500 p-4 rounded-r animate-fade-in">
                     <p className="text-sm text-green-700">{successMsg}</p>
                 </div>
             )}
@@ -302,15 +399,21 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end">
-                      <button type="button" onClick={() => switchView('forgot_password')} className={`text-sm font-medium hover:underline transition-colors ${activeTab === 'guardian' ? 'text-brand-secondary' : 'text-brand-primary'}`}>
-                          Esqueceu a senha?
-                      </button>
+                    <div className="flex items-center justify-between mt-2">
+                         {activeTab === 'guardian' ? (
+                            <button type="button" onClick={() => switchView('guardian_register')} className="text-sm font-bold text-brand-secondary hover:underline">
+                                Primeiro acesso? Criar Senha
+                            </button>
+                         ) : <div></div>}
+
+                        <button type="button" onClick={() => switchView('forgot_password')} className="text-sm font-medium text-gray-500 hover:text-gray-800 hover:underline transition-colors">
+                            Esqueceu a senha?
+                        </button>
                     </div>
 
                     {error && (
-                        <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-r flex items-center">
-                            <svg className="w-5 h-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-r flex items-start mt-2">
+                            <svg className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             <p className="text-sm text-red-700">{error}</p>
                         </div>
                     )}
@@ -380,6 +483,71 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
                 </form>
             )}
 
+            {/* GUARDIAN REGISTER FORM (PRIMEIRO ACESSO) */}
+            {view === 'guardian_register' && (
+                <form onSubmit={handleGuardianRegisterSubmit} className="space-y-4">
+                    <p className="text-sm text-gray-600 text-center mb-4">Confirme seu CPF para criar sua senha de acesso.</p>
+                    
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">CPF do Responsável</label>
+                        <input 
+                            type="text" 
+                            value={gRegCpf} 
+                            onChange={(e) => handleCpfChange(e, setGRegCpf)} 
+                            required 
+                            maxLength={14} 
+                            className="mt-1 block w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-md shadow-sm focus:ring-brand-secondary focus:border-brand-secondary" 
+                            placeholder="000.000.000-00"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Email para Contato</label>
+                        <input 
+                            type="email" 
+                            value={gRegEmail} 
+                            onChange={(e) => setGRegEmail(e.target.value)} 
+                            required 
+                            className="mt-1 block w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-md shadow-sm focus:ring-brand-secondary focus:border-brand-secondary" 
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Crie uma Senha</label>
+                        <input 
+                            type="password" 
+                            value={gRegPassword} 
+                            onChange={(e) => setGRegPassword(e.target.value)} 
+                            required 
+                            className="mt-1 block w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-md shadow-sm focus:ring-brand-secondary focus:border-brand-secondary" 
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Confirme a Senha</label>
+                        <input 
+                            type="password" 
+                            value={gRegConfirmPassword} 
+                            onChange={(e) => setGRegConfirmPassword(e.target.value)} 
+                            required 
+                            className="mt-1 block w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-md shadow-sm focus:ring-brand-secondary focus:border-brand-secondary" 
+                        />
+                    </div>
+
+                    {error && (
+                        <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-r flex items-start">
+                            <svg className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <p className="text-sm text-red-700">{error}</p>
+                        </div>
+                    )}
+
+                    <button type="submit" disabled={isLoading} className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-secondary hover:bg-orange-600 focus:outline-none">
+                        {isLoading ? 'Verificando...' : 'Cadastrar Senha'}
+                    </button>
+                    
+                    <button type="button" onClick={() => switchView('login')} className="w-full text-center text-sm font-medium text-gray-600 hover:text-gray-900 mt-2">
+                        Voltar para Login
+                    </button>
+                </form>
+            )}
+
             {/* FORGOT PASSWORD FORM */}
             {view === 'forgot_password' && (
                 <form onSubmit={handleRecoverySubmit} className="space-y-6">
@@ -389,7 +557,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, students }) => {
                         <input type="email" value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} required className="mt-1 block w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-md shadow-sm focus:ring-brand-secondary focus:border-brand-secondary" />
                     </div>
 
-                    <button type="submit" disabled={isLoading} className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-secondary hover:bg-orange-600 focus:outline-none">
+                    <button type="submit" disabled={isLoading} className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none">
                         {isLoading ? 'Enviando...' : 'Enviar Link'}
                     </button>
 

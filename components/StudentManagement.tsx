@@ -28,10 +28,25 @@ const StudentForm: React.FC<{
         guardianCpf: ''
     }
   );
+
+  const formatCPF = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let finalValue = value;
+
+    if (name === 'guardianCpf') {
+        finalValue = formatCPF(value);
+    }
+
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -76,6 +91,7 @@ const StudentForm: React.FC<{
                     value={formData.guardianCpf || ''} 
                     onChange={handleChange} 
                     required 
+                    maxLength={14}
                     placeholder="000.000.000-00"
                     className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
                 />
